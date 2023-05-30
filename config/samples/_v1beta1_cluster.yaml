@@ -3,4 +3,11 @@ kind: Cluster
 metadata:
   name: cluster-sample
 spec:
-  # TODO(user): Add fields here
+  enabled: false
+  provider: "sumengzs.cn"
+  endpoint: "https://test.sumengzs.cn"
+  region:
+    zone: "North"
+    country: "China"
+    province: "hebei"
+    city: "beijing"
