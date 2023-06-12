@@ -27,7 +27,41 @@ type ClusterSpec struct {
 	Provider string `json:"provider,omitempty"`
 	// Desired state of the cluster
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Disabled bool `json:"disabled,omitempty"`
+	// Connect used to connect to cluster api server.
+	// You can choose one of the following three ways to connect:
+	// + ConnectConfig.Secret
+	// + ConnectConfig.Config
+	// + ConnectConfig.Token
+	Connect ConnectConfig `json:"connect"`
+	// Region represents the region of the member cluster locate in.
+	// +optional
+	Region Region `json:"region,omitempty"`
+}
+
+type ConnectConfig struct {
+	// It is relatively safe to use Secret to save token and CABundle in the cluster.
+	// It is recommended and has the highest priority.
+	// If you want to do this, the data definition of Secret must meet the following conditions:
+	// - secret.data.token
+	// - secret.data.caBundle
+	// +optional
+	Secret *SecretRef `json:"secret,omitempty"`
+	// Config needs to use a configuration file to connect. If you have defined a Secret,
+	//it will use the Secret for encoding and decoding to ensure data security. Moderate recommendation.
+	// config usually can be /etc/kubernetes/admin.conf or ~/.kube/config
+	// +optional
+	Config *ConfigRef `json:"config,omitempty"`
+	// The Token display declares the token and CABundle connected to the cluster,
+	// which is not safe, not recommended, and has the lowest priority.
+	// +optional
+	Token *TokenRef `json:"token,omitempty"`
+	// InsecureSkipTLSVerification indicates that the cluster pool should not confirm the validity of the serving
+	// certificate of the cluster it is connecting to. This will make the HTTPS connection between the cluster pool
+	// and the member cluster insecure.
+	// Defaults to false.
+	// +optional
+	InsecureSkipTLSVerification bool `json:"insecureSkipTLSVerification,omitempty"`
 	// Kubernetes API Server endpoint.
 	// hostname:port, IP or IP:port.
 	// Example: https://10.10.0.1:6443
@@ -43,11 +77,41 @@ type ClusterSpec struct {
 	// For the header with multiple values, the values should be separated by comma(e.g. 'k1': 'v1,v2,v3').
 	// +optional
 	ProxyHeader map[string]string `json:"proxyHeader,omitempty"`
-	// KubeConfig content used to connect to cluster api server
-	KubeConfig []byte `json:"kubeconfig,omitempty"`
-	// Region represents the region of the member cluster locate in.
+}
+
+type ConfigRef struct {
+	//Secret used to encode and decode Config to protect Config from being leaked.
 	// +optional
-	Region Region `json:"region,omitempty"`
+	Secret *SecretRef `json:"secret,omitempty"`
+	// The Config used to connect to the cluster.
+	// There is no need to encrypt when joining.
+	// When saving data, it will automatically use Secret for encryption. If Secret exists.
+	Config []byte `json:"config,omitempty"`
+}
+
+type SecretRef struct {
+	// Namespace is the namespace for the resource being referenced.
+	Namespace string `json:"namespace"`
+
+	// Name is the name of resource being referenced.
+	Name string `json:"name"`
+}
+
+const (
+	// SecretTokenKey is the name of secret token key.
+	SecretTokenKey = "token"
+	// SecretCADataKey is the name of secret caBundle key.
+	SecretCADataKey = "caBundle"
+)
+
+type TokenRef struct {
+	// CABundle contains the certificate authority information.
+	// +optional
+	CABundle []byte `json:"caBundle,omitempty"`
+
+	// Token contain the token authority information.
+	// +optional
+	Token string `json:"token,omitempty"`
 }
 
 type Region struct {

@@ -66,32 +66,100 @@ spec:
           spec:
             description: ClusterSpec defines the desired state of Cluster
             properties:
-              enabled:
+              connect:
+                description: 'Connect used to connect to cluster api server. You can
+                  choose one of the following three ways to connect:'
+                properties:
+                  config:
+                    description: Config needs to use a configuration file to connect.
+                      If you have defined a Secret, it will use the Secret for encoding
+                      and decoding to ensure data security. Moderate recommendation.
+                      config usually can be /etc/kubernetes/admin.conf or ~/.kube/config
+                    properties:
+                      config:
+                        description: The Config used to connect to the cluster. There
+                          is no need to encrypt when joining. When saving data, it
+                          will automatically use Secret for encryption. If Secret
+                          exists.
+                        format: byte
+                        type: string
+                      secret:
+                        description: Secret used to encode and decode Config to protect
+                          Config from being leaked.
+                        properties:
+                          name:
+                            description: Name is the name of resource being referenced.
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace for the resource
+                              being referenced.
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
+                    type: object
+                  endpoint:
+                    description: 'Kubernetes API Server endpoint. hostname:port, IP
+                      or IP:port. Example: https://10.10.0.1:6443'
+                    type: string
+                  insecureSkipTLSVerification:
+                    description: InsecureSkipTLSVerification indicates that the cluster
+                      pool should not confirm the validity of the serving certificate
+                      of the cluster it is connecting to. This will make the HTTPS
+                      connection between the cluster pool and the member cluster insecure.
+                      Defaults to false.
+                    type: boolean
+                  proxyHeader:
+                    additionalProperties:
+                      type: string
+                    description: 'ProxyHeader is the HTTP header required by proxy
+                      server. The key in the key-value pair is HTTP header key and
+                      value is the associated header payloads. For the header with
+                      multiple values, the values should be separated by comma(e.g.
+                      ''k1'': ''v1,v2,v3'').'
+                    type: object
+                  proxyURL:
+                    description: 'ProxyURL is the proxy URL for the cluster. If not
+                      empty, the multi-cluster control plane will use this proxy to
+                      talk to the cluster. More details please refer to: https://github.com/kubernetes/client-go/issues/351'
+                    type: string
+                  secret:
+                    description: 'It is relatively safe to use Secret to save token
+                      and CABundle in the cluster. It is recommended and has the highest
+                      priority. If you want to do this, the data definition of Secret
+                      must meet the following conditions: - secret.data.token - secret.data.caBundle'
+                    properties:
+                      name:
+                        description: Name is the name of resource being referenced.
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace for the resource being
+                          referenced.
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                  token:
+                    description: The Token display declares the token and CABundle
+                      connected to the cluster, which is not safe, not recommended,
+                      and has the lowest priority.
+                    properties:
+                      caBundle:
+                        description: CABundle contains the certificate authority information.
+                        format: byte
+                        type: string
+                      token:
+                        description: Token contain the token authority information.
+                        type: string
+                    type: object
+                type: object
+              disabled:
                 description: Desired state of the cluster
                 type: boolean
-              endpoint:
-                description: 'Kubernetes API Server endpoint. hostname:port, IP or
-                  IP:port. Example: https://10.10.0.1:6443'
-                type: string
-              kubeconfig:
-                description: KubeConfig content used to connect to cluster api server
-                format: byte
-                type: string
               provider:
                 description: Provider of the cluster, this field is just for description
-                type: string
-              proxyHeader:
-                additionalProperties:
-                  type: string
-                description: 'ProxyHeader is the HTTP header required by proxy server.
-                  The key in the key-value pair is HTTP header key and value is the
-                  associated header payloads. For the header with multiple values,
-                  the values should be separated by comma(e.g. ''k1'': ''v1,v2,v3'').'
-                type: object
-              proxyURL:
-                description: 'ProxyURL is the proxy URL for the cluster. If not empty,
-                  the multi-cluster control plane will use this proxy to talk to the
-                  cluster. More details please refer to: https://github.com/kubernetes/client-go/issues/351'
                 type: string
               region:
                 description: Region represents the region of the member cluster locate
@@ -114,6 +182,8 @@ spec:
                       in.
                     type: string
                 type: object
+            required:
+            - connect
             type: object
           status:
             description: ClusterStatus defines the observed state of Cluster
