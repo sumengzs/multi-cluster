@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/sumengzs/multi-cluster/pkg/pool"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -77,10 +78,16 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+	p, err := pool.New(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "initializing cluster pool failed")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.ClusterController{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Pool:   p,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Cluster")
 		os.Exit(1)

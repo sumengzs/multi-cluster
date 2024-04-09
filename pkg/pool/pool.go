@@ -20,9 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/sumengzs/multi-cluster/pkg/cluster"
-	"github.com/sumengzs/multi-cluster/pkg/utils"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 )
@@ -33,26 +31,21 @@ type Pool struct {
 	clusters map[string]cluster.Interface
 }
 
-func New(opts *Options) Interface {
+func New(config *rest.Config) (Interface, error) {
 	clusters := make(map[string]cluster.Interface)
-	config := utils.GetConfigOrDie(opts.Master, opts.KubeConfig)
-	config.QPS = opts.QPS
-	config.Burst = opts.Burst
 	config = rest.AddUserAgent(config, UserAgentName)
 
 	cli, err := client.New(config, client.Options{
 		Scheme: Scheme,
-		Mapper: nil,
 	})
 	if err != nil {
-		klog.ErrorS(err, "build client failed")
-		return nil
+		return nil, err
 	}
 
 	return &Pool{
 		client:   cli,
 		clusters: clusters,
-	}
+	}, nil
 }
 
 func (p *Pool) Start(ctx context.Context) error {
