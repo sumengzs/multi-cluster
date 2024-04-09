@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ClusterReconciler{
+	if err = (&controllers.ClusterController{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

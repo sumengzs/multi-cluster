@@ -16,6 +16,7 @@ type Builder struct {
 	clusterName string
 	master      client.Client
 	scheme      *runtime.Scheme
+	options     []InitOptions
 }
 
 func By(master client.Client) *Builder {
@@ -27,6 +28,11 @@ func (b *Builder) WithScheme(scheme *runtime.Scheme) *Builder {
 
 	}
 	b.scheme = scheme
+	return b
+}
+
+func (b *Builder) WithOptions(opts ...InitOptions) *Builder {
+	b.options = opts
 	return b
 }
 
@@ -47,7 +53,7 @@ func (b *Builder) Complete() (Interface, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client rest config: %s", err)
 	}
-	cluster, err := New(config, b.scheme)
+	cluster, err := New(config, b.scheme, b.options...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cluster: %s", err)
 	}

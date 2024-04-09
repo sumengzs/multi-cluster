@@ -33,6 +33,8 @@ import (
 
 var _ Interface = &cluster{}
 
+type InitOptions func(Interface) error
+
 type cluster struct {
 	name       string
 	ctx        context.Context
@@ -50,7 +52,7 @@ type cluster struct {
 
 // New returns a new cluster or error
 // default status code is Stopped
-func New(config *rest.Config, scheme *runtime.Scheme) (Interface, error) {
+func New(config *rest.Config, scheme *runtime.Scheme, options ...InitOptions) (Interface, error) {
 	var clu *cluster
 	var err error
 
@@ -74,6 +76,7 @@ func New(config *rest.Config, scheme *runtime.Scheme) (Interface, error) {
 	if clu.extensions, err = clientset.NewForConfig(config); err != nil {
 		return nil, fmt.Errorf("failed to create api-extensions client: %s", err)
 	}
+	clu.extensions.ApiextensionsV1beta1().CustomResourceDefinitions()
 
 	if clu.discovery, err = discovery.NewDiscoveryClientForConfig(config); err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %s", err)
@@ -82,7 +85,13 @@ func New(config *rest.Config, scheme *runtime.Scheme) (Interface, error) {
 	clu.status = Stopped
 	clu.scheme = scheme
 
-	return &cluster{}, nil
+	for _, option := range options {
+		if err = option(clu); err != nil {
+			return nil, fmt.Errorf("failed to initialize options: %s", err)
+		}
+	}
+
+	return clu, nil
 }
 
 func (c *cluster) Start(ctx context.Context) error {

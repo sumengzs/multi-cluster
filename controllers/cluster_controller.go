@@ -18,18 +18,24 @@ package controllers
 
 import (
 	"context"
+	"github.com/sumengzs/multi-cluster/pkg/cluster"
+	"github.com/sumengzs/multi-cluster/pkg/pool"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	sumengzscnv1beta1 "github.com/sumengzs/multi-cluster/api/v1beta1"
+	"github.com/sumengzs/multi-cluster/api/v1beta1"
 )
 
-// ClusterReconciler reconciles a Cluster object
-type ClusterReconciler struct {
+// ClusterController reconciles a Cluster object
+type ClusterController struct {
 	client.Client
+	Pool   pool.Interface
 	Scheme *runtime.Scheme
 }
 
@@ -46,7 +52,7 @@ type ClusterReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
-func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,8 +61,42 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&sumengzscnv1beta1.Cluster{}).
+		For(&v1beta1.Cluster{}).
+		WithEventFilter(r.Predicate()).
 		Complete(r)
+}
+
+func (r *ClusterController) Predicate() predicate.Predicate {
+	return predicate.Funcs{
+		DeleteFunc: func(event event.DeleteEvent) bool {
+			clu := event.Object.(*v1beta1.Cluster)
+			r.Pool.Remove(clu.Name)
+			return false
+		},
+		UpdateFunc: func(event event.UpdateEvent) bool {
+			return false
+		},
+		CreateFunc: func(event event.CreateEvent) bool {
+			clu := event.Object.(*v1beta1.Cluster)
+			cc, err := cluster.
+				By(r.Client).
+				WithScheme(r.Scheme).
+				Named(clu.Name).
+				WithOptions().
+				Complete()
+			if err != nil {
+				klog.Errorf("error creating cluster %s: %v", clu.Name, err)
+				return false
+			}
+			err = r.Pool.Add(cc)
+			if err != nil {
+				klog.Errorf("error add cluster to pool %s: %v", cc.Name(), err)
+				r.Pool.Remove(cc.Name())
+				return false
+			}
+			return false
+		},
+	}
 }
